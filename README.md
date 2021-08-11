@@ -219,3 +219,80 @@ public class BeerControllerIT {
 #### Spring Security Java Configuration
 
 Permit All with URL Pattern Matching
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorize -> {
+                    authorize.antMatchers("/", "/webjars/**", "/login", "/resources/**","/beers/find", "/beers*" ).permitAll();
+                })
+                .authorizeRequests()
+                .anyRequest()
+                .authenticated()
+                .and()
+                .formLogin().and()
+                .httpBasic();
+    }
+}
+```
+
+##### Http Method Matching
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorize -> {
+                    authorize.antMatchers("/", "/webjars/**", "/login", "/resources/**").permitAll()
+                            .antMatchers("/beers/find", "/beers*").permitAll()
+                            .antMatchers(HttpMethod.GET, "/api/v1/beer/**").permitAll();
+                })
+                .authorizeRequests()
+                .anyRequest()
+                .authenticated()
+                .and()
+                .formLogin().and()
+                .httpBasic();
+    }
+}
+```
+
+##### Spring MVC Path Matchers
+
+```java
+   @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests(authorize -> {
+                    authorize.antMatchers("/", "/webjars/**", "/login", "/resources/**").permitAll()
+                            .antMatchers("/beers/find", "/beers*").permitAll()
+                            .antMatchers(HttpMethod.GET, "/api/v1/beer/**").permitAll()
+                            .mvcMatchers(HttpMethod.GET, "/api/v1/beerUpc/{upc}").permitAll();
+                })
+                .authorizeRequests()
+                .anyRequest()
+                .authenticated()
+                .and()
+                .formLogin().and()
+                .httpBasic();
+    }
+```
+
+#### In Memory Authentication Provider
+
+##### Spring Security Authentication Components
+
+- Authentication Filter - A filter for a specific Authentication type in the Spring Security filter
+  chain. (ie basic auth, remember me cookie, etc)
+- Authentication Manager - Standard API interface used by filter
+- Authentication Provider - The implementation of Authentication - (in memory, database, etc)
+- User Details Service - Service to provide information about user
+- Password Encoder - Service to encrypt and verify passwords
+- Security Context - Holds details about authenticated entity
