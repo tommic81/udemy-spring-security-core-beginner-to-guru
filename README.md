@@ -296,3 +296,72 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 - User Details Service - Service to provide information about user
 - Password Encoder - Service to encrypt and verify passwords
 - Security Context - Holds details about authenticated entity
+
+##### User Details Service
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+@Override
+    @Bean
+    protected UserDetailsService userDetailsService() {
+        UserDetails admin = User.withDefaultPasswordEncoder()
+                .username("spring")
+                .password("guru")
+                .roles("ADMIN")
+                .build();
+
+        UserDetails user = User.withDefaultPasswordEncoder()
+                .username("user")
+                .password("password")
+                .roles("USER")
+                .build();
+
+        return new InMemoryUserDetailsManager(admin,user);
+    }
+}    
+```
+
+##### In Memory Authentication Fluent API
+
+```java
+  @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+       auth.inMemoryAuthentication()
+               .withUser("spring")
+               .password("{noop}guru") // noop - password encoder (no encoding)
+               .roles("ADMIN")
+               .and()
+               .withUser("user")
+               .password("{noop}guru")
+               .roles("USER");
+    }
+```
+
+#### Password Security
+
+##### Password Encoding
+
+- Password Hash
+  - A hash is a one-way mathematical algorithm applied to the password
+    - One way meaning the hash value can be generated from a password
+    - But the password cannot be generated from the hash value
+
+- Password Salt
+  - A salt is additional data added to the value being hashed
+  - Example of password with salt: password1{ThisIsMyReallyLongPasswordSaltValue}
+    - Modern algorithms use random salt values
+
+- Delegating Password Encoder
+  - Spring Security 5 introduced a delegating password encoder
+  - Allows storage of password hashes in multiple formats
+  - Password hashes stored as - {encodername}<somepasswordhashvalue>
+  - Thus allows you to support multiple hash algorithms while migrating
+
+- Password Encoder Recommendation
+  - The Spring Security team recommends using an adaptive one way encoding function such as:
+    - BCrypt (Default)
+    - Pbkdf2
+    - SCrypt
