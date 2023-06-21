@@ -98,7 +98,7 @@
 
 #### Cross-Site Request Forgery - CSRF
 
-- Auteticated user is redirected to the attaker's so he can stole credentials and use it to  request a real site 
+- Authenticated user is redirected to the attaker's so he can stole credentials and use it to  request a real site 
 
 - To protect from this attact String provides CRSF Token.
 
@@ -365,3 +365,348 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     - BCrypt (Default)
     - Pbkdf2
     - SCrypt
+
+##### LDAP Password Encoder
+
+```java
+    @Bean
+    PasswordEncoder passwordEncoder(){
+        return new LdapShaPasswordEncoder();
+    }
+```
+
+##### SHA-256 LDAP Password Encoder
+
+```java
+   @Bean
+    PasswordEncoder passwordEncoder(){
+        return new StandardPasswordEncoder();
+    }
+```
+
+##### BCrypt Password Encoder
+
+```java
+ @Bean
+    PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+```
+
+##### Delegating Password Encoder
+
+```java
+ @Bean
+    PasswordEncoder passwordEncoder(){
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+```
+
+```java
+  @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.inMemoryAuthentication()
+                .withUser("spring")
+                .password("{bcrypt}$2a$10$DMeky14ZiYx25kBPDlSi2eQRQ4KSWdTYqcyLOk/oiwvZLQ06H/diS")
+                .roles("ADMIN")
+                .and()
+                .withUser("user")
+                .password("{sha256}5b0b6414f3c80385662fb67a276bbb5971a381b693745973e6afe3e5ee076ec0daa2bc3562771c7e")
+                .roles("USER");
+
+        auth.inMemoryAuthentication().withUser("scott").password("{ldap}{SSHA}wxajkfpXZ+3oUyHJ4NvUZ8tXAkW7licc2VRe+w==").roles("CUSTOMER");
+    }
+```
+
+##### Custom Delegating Password Encoder
+
+```java
+public class SfgPasswordEncoderFactories {
+
+    public static PasswordEncoder createDelegatingPasswordEncoder() {
+        String encodingId = "bcrypt";
+        Map<String, PasswordEncoder> encoders = new HashMap();
+        encoders.put(encodingId, new BCryptPasswordEncoder());
+        encoders.put("ldap", new LdapShaPasswordEncoder());
+        encoders.put("noop", NoOpPasswordEncoder.getInstance());
+        encoders.put("sha256", new StandardPasswordEncoder());
+        return new DelegatingPasswordEncoder(encodingId, encoders);
+    }
+
+    private SfgPasswordEncoderFactories() {
+    }
+}
+```
+
+
+
+```java
+@Bean
+PasswordEncoder passwordEncoder(){
+        return SfgPasswordEncoderFactories.createDelegatingPasswordEncoder();
+}
+```
+
+#### Custom Authentication Filter 
+
+- RestHeaderAuthFilter
+
+```java
+@Slf4j
+public class RestHeaderAuthFilter extends AbstractRestAuthFilter {
+
+    public RestHeaderAuthFilter(RequestMatcher requiresAuthenticationRequestMatcher) {
+        super(requiresAuthenticationRequestMatcher);
+    }
+
+    protected String getPassword(HttpServletRequest request) {
+        return request.getHeader("Api-Secret");
+    }
+
+    protected String getUsername(HttpServletRequest request) {
+        return request.getHeader("Api-Key");
+    }
+}
+@Slf4j
+public abstract  class AbstractRestAuthFilter extends AbstractAuthenticationProcessingFilter {
+
+    public AbstractRestAuthFilter(RequestMatcher requiresAuthenticationRequestMatcher) {
+        super(requiresAuthenticationRequestMatcher);
+    }
+
+    @Override
+    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
+            throws IOException, ServletException {
+
+        HttpServletRequest request = (HttpServletRequest) req;
+        HttpServletResponse response = (HttpServletResponse) res;
+
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Request is to process authentication");
+        }
+
+        try {
+            Authentication authResult = attemptAuthentication(request, response);
+
+            if (authResult != null) {
+                successfulAuthentication(request, response, chain, authResult);
+            } else {
+                chain.doFilter(request, response);
+            }
+        } catch (AuthenticationException e) {
+            log.error("Authentication Failed", e);
+            unsuccessfulAuthentication(request, response, e);
+        }
+    }
+
+    @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request,
+                                              HttpServletResponse response, AuthenticationException failed)
+            throws IOException, ServletException {
+
+        SecurityContextHolder.clearContext();
+
+        if (log.isDebugEnabled()) {
+            log.debug("Authentication request failed: " + failed.toString(), failed);
+            log.debug("Updated SecurityContextHolder to contain null Authentication");
+        }
+
+        response.sendError(HttpStatus.UNAUTHORIZED.value(),
+                HttpStatus.UNAUTHORIZED.getReasonPhrase());
+    }
+
+    @Override
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
+        String userName = getUsername(request);
+        String password = getPassword(request);
+
+        if (userName == null) {
+            userName = "";
+        }
+
+        if (password == null) {
+            password = "";
+        }
+
+        log.debug("Authenticating User: " + userName);
+
+        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(userName, password);
+
+        if (!StringUtils.isEmpty(userName)) {
+            return this.getAuthenticationManager().authenticate(token);
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    protected void successfulAuthentication(HttpServletRequest request,
+                                            HttpServletResponse response, FilterChain chain, Authentication authResult)
+            throws IOException, ServletException {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Authentication success. Updating SecurityContextHolder to contain: "
+                    + authResult);
+        }
+
+        SecurityContextHolder.getContext().setAuthentication(authResult);
+
+    }
+
+    protected abstract String getPassword(HttpServletRequest request);
+
+    protected abstract String getUsername(HttpServletRequest request);
+}
+```
+
+- SecurityConfig
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+public RestHeaderAuthFilter restHeaderAuthFilter(AuthenticationManager authenticationManager){
+        RestHeaderAuthFilter filter = new RestHeaderAuthFilter(new AntPathRequestMatcher("/api/**"));
+        filter.setAuthenticationManager(authenticationManager);
+        return filter;
+    }
+    
+    
+ @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.addFilterBefore(restHeaderAuthFilter(authenticationManager()),
+                UsernamePasswordAuthenticationFilter.class)
+        .csrf().disable();
+
+        http.addFilterBefore(restUrlAuthFilter(authenticationManager()),
+                UsernamePasswordAuthenticationFilter.class);
+
+        http
+                .authorizeRequests(authorize -> {
+                    authorize.antMatchers("/", "/webjars/**", "/login", "/resources/**").permitAll()
+                            .antMatchers("/beers/find", "/beers*").permitAll()
+                            .antMatchers(HttpMethod.GET, "/api/v1/beer/**").permitAll()
+                            .mvcMatchers(HttpMethod.GET, "/api/v1/beerUpc/{upc}").permitAll();
+                })
+                .authorizeRequests()
+                .anyRequest()
+                .authenticated()
+                .and()
+                .formLogin().and()
+                .httpBasic();
+    }   
+```
+
+#### Database Authentication
+
+- You will need to provide  an alternate User Details Service 
+- Spring Security provides the interface, you provide the implementation 
+- Can be in-memory (as we’ve been using), JDBC, NoSQL, external service, etc 
+- Spring Security does provide a JDBC implementation with database schemas 
+- Provide custom Database Authentication using Spring Data JPA 
+- Need User and Authority JPA Entities 
+- Spring Data JPA Repositories
+- Configure Spring Security to use custom implementation of User Details Service
+
+##### JPA Entities
+
+- `org.springframework.security.core.userdetails.User`
+
+#### User Roles
+
+##### Authorization in Spring Security
+
+- Authorization is the approval to perform an action within the application 
+- Authorization can be as simple as allow all or is authenticated 
+- Specific actions can be limited to specific roles or authorities  
+- By default, Spring Security roles start with “ROLE_”  
+  - Example: ROLE_ADMIN  
+
+- Spring Security authorities may be any string value 
+
+###### Roles vs Authorities 
+
+- Typically a role is considered a group of one or more authorities 
+
+- In a Spring Security context: 
+  - Roles by default start with “ROLE_” 
+    - Configuration uses methods of hasRole() or hasAnyRole() - requires prefix 
+
+- Authorities are any string 
+  - Configuration uses methods of hasAuthority() or hasAnyAuthority()
+
+
+
+###### Access Decision Voters
+
+- Access Decision Voters provide a vote on allowing access 
+
+  - ACCESS_ABSTAIN - Voter has no opinion 
+
+  - ACCESS_DENIED - Voter does not approve 
+
+  - ACCESS_GRANTED = Voter approves access 
+
+###### Role Voter
+
+- Most commonly used voter in Spring Security 
+- Uses role names to grant access 
+- If Authenticated user has role, access is granted 
+  - If no authorities begin with prefix of ROLE_ this voter will abstain
+
+###### Authenticated Voter
+
+- Grants Access based on level of authentication
+  - Anonymously - Not Authenticated 
+  - Remembered - Authenticated via Remember me cookie 
+  - Fully - Fully Authenticated
+
+###### Consensus Voter
+
+- Accepts list of Access Decision voters 
+- Polls each voter 
+- Access granted based on total of allowed vs denied responses
+
+###### Role Hierarchy Voter
+
+- Allows configuration of Role Hierarchies 
+
+- Example: 
+
+  - ROLE_USER 
+
+  - ROLE_ADMIN > ROLE_USER > ROLE_FOO 
+
+- ROLE_ADMIN will have all of its authorities, and those of ROLE_USER and ROLE_FOO
+
+###### Security Expressions
+
+- permitAll - Allows all access 
+- denyAll - Denies all access 
+- isAnonymous - Is Authenticated Anonymously 
+- isAuthenticated - Is Authenticated (Fully or Remembered) 
+- isRememberMe - Is Authenticated with Remember Me Cookie 
+- isFullyAuthenticated - Is Fully Authenticated 
+
+- hasRole - Has authority with ROLE_*** 
+- _hasAnyRole - Accepts list of ROLE_*** strings 
+- hasAuthority - Has authority string value 
+- hasAnyAuthority - Accepts list of string authority values 
+- hasIpAddress - accepts IP Address or IP/Netmask 
+
+###### Http Filter Security Interceptor
+
+- Securing specific URLs is done using Spring Security Filters 
+- Filters use configured voters to determine authorization 
+- Security expressions available for use in Java configuration of HttpSecurity
+
+###### Method Security
+
+- Spring Security also has method level security 
+- Enable using @EnableGlobalMethodSecurity configuration annotation 
+- @Secured - accepts list of roles, or IS_AUTHENTICATED_ANONYMOUSLY 
+- @PreAuthorize - accepts security expressions 
+- Under covers Spring Security is using AOP to intercept and use the AccessDecisionManager 
+  - Same technique as Filter
