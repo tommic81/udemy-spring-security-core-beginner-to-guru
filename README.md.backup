@@ -47,7 +47,7 @@
 - SCrypt - Uses scrypt algorithm
 - Custom - Roll your own? Not recommended!
 
-#### Spring Security Modules
+### Spring Security Modules
 
 - Core - Core modules of Spring Security
 - Remoting - Only needed for support of RMI operations
