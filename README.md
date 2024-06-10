@@ -129,7 +129,7 @@
 - Should not solely rely on SameSite attribute for CSRF prevention
 
 ## HTTP Basic Auth
-
+jakie plany weekendowe?ju
 - Two way to sumbit:
   - URL Encoding - https://username:password@www.example.com
   - HTTP Header - Key: Authorization, Value: Basic \<Base64 encoded string>

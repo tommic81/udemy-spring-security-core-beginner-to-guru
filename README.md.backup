@@ -47,7 +47,7 @@
 - SCrypt - Uses scrypt algorithm
 - Custom - Roll your own? Not recommended!
 
-### Spring Security Modules
+#### Spring Security Modules
 
 - Core - Core modules of Spring Security
 - Remoting - Only needed for support of RMI operations
@@ -129,7 +129,7 @@
 - Should not solely rely on SameSite attribute for CSRF prevention
 
 ## HTTP Basic Auth
-
+jakie plany weekendowe?
 - Two way to sumbit:
   - URL Encoding - https://username:password@www.example.com
   - HTTP Header - Key: Authorization, Value: Basic \<Base64 encoded string>
