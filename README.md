@@ -129,7 +129,6 @@
 - Should not solely rely on SameSite attribute for CSRF prevention
 
 ## HTTP Basic Auth
-jakie plany weekendowe?ju
 - Two way to sumbit:
   - URL Encoding - https://username:password@www.example.com
   - HTTP Header - Key: Authorization, Value: Basic \<Base64 encoded string>
@@ -150,7 +149,7 @@ jakie plany weekendowe?ju
     - Set Property spring.security.user.password to override
   - All paths secured - except actuator info and health
 
-##### Customizing user name and password
+### Customizing user name and password
 
 - application.properties
 
@@ -159,9 +158,12 @@ spring.security.user.name=spring
 spring.security.user.password=guru
 ```
 
-##### Integration test
+### Integration test
+- `@WithMockUser("spring")` - injects a user into the context
 
 ```java
+//BeerControllerIT.java
+
 @WebMvcTest
 public class BeerControllerIT {
     @Autowired
@@ -204,11 +206,13 @@ public class BeerControllerIT {
 
 ```
 
-##### Testing HTTP Basic Auth
+### Testing HTTP Basic Auth
 
-- BeerControllerIT.java
+- `.with(httpBasic("foo","bar"))` - runs basic authentication
 
 ```java
+//BeerControllerIT.java
+
     @Test
     void findBeersWithHttpBasic() throws Exception{
         mockMvc.perform(get("/beers/find").with(httpBasic("foo","bar")))
@@ -218,7 +222,7 @@ public class BeerControllerIT {
     }
 ```
 
-##### String Security Filter Chain
+### String Security Filter Chain
 
 - https://spring.io/projects/spring-security#learn
 - https://docs.spring.io/spring-security/site/docs/5.3.10.RELEASE/reference/html5/#servlet-security-filters
