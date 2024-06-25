@@ -235,15 +235,13 @@ Permit All with URL Pattern Matching
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
-    @Override
+       @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http
-                .authorizeRequests(authorize -> {
-                    authorize.antMatchers("/", "/webjars/**", "/login", "/resources/**","/beers/find", "/beers*" ).permitAll();
+        http.authorizeRequests(auth -> {
+                    auth.antMatchers("/", "/webjars/**", "/login", "/resources/**").permitAll();
                 })
                 .authorizeRequests()
-                .anyRequest()
-                .authenticated()
+                .anyRequest().authenticated()
                 .and()
                 .formLogin().and()
                 .httpBasic();
@@ -259,41 +257,43 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http
-                .authorizeRequests(authorize -> {
-                    authorize.antMatchers("/", "/webjars/**", "/login", "/resources/**").permitAll()
-                            .antMatchers("/beers/find", "/beers*").permitAll()
-                            .antMatchers(HttpMethod.GET, "/api/v1/beer/**").permitAll();
+        http.authorizeRequests(auth -> {
+                    auth.antMatchers("/", "/webjars/**", "/login", "/resources/**").permitAll();
+                    auth.antMatchers("/beers/find", "/beers*").permitAll();
+                    auth.antMatchers(HttpMethod.GET, "/api/v1/beer/**").permitAll();
                 })
                 .authorizeRequests()
-                .anyRequest()
-                .authenticated()
+                .anyRequest().authenticated()
                 .and()
                 .formLogin().and()
                 .httpBasic();
     }
 }
+
 ```
 
 ##### Spring MVC Path Matchers
+- We use this matcher i.e. when we want to use parameters`{<param>}` in the patterns.
 
 ```java
-   @Override
+ @Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http
-                .authorizeRequests(authorize -> {
-                    authorize.antMatchers("/", "/webjars/**", "/login", "/resources/**").permitAll()
+        http.authorizeRequests(auth -> {
+                    auth.antMatchers("/", "/webjars/**", "/login", "/resources/**").permitAll()
                             .antMatchers("/beers/find", "/beers*").permitAll()
                             .antMatchers(HttpMethod.GET, "/api/v1/beer/**").permitAll()
                             .mvcMatchers(HttpMethod.GET, "/api/v1/beerUpc/{upc}").permitAll();
                 })
                 .authorizeRequests()
-                .anyRequest()
-                .authenticated()
+                .anyRequest().authenticated()
                 .and()
                 .formLogin().and()
                 .httpBasic();
     }
+}
 ```
 
 #### In Memory Authentication Provider
