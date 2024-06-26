@@ -249,7 +249,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 }
 ```
 
-##### Http Method Matching
+### Http Method Matching
 
 ```java
 @Configuration
@@ -272,7 +272,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
 ```
 
-##### Spring MVC Path Matchers
+### Spring MVC Path Matchers
 - We use this matcher i.e. when we want to use parameters`{<param>}` in the patterns.
 
 ```java
@@ -296,9 +296,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 }
 ```
 
-#### In Memory Authentication Provider
+## In Memory Authentication Provider
 
-##### Spring Security Authentication Components
+### Spring Security Authentication Components
 
 - Authentication Filter - A filter for a specific Authentication type in the Spring Security filter
   chain. (ie basic auth, remember me cookie, etc)
@@ -308,7 +308,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 - Password Encoder - Service to encrypt and verify passwords
 - Security Context - Holds details about authenticated entity
 
-##### User Details Service
+#### In Memory User Details Manager
+- Implements User Details Service
+- Used by Spring Boot Auto-configuration
+- Non-persistent implementation - uses in-memory map
+- Mainly used for testing and demonstration purposes
+  - Not normally used in production systems
+
+### User Details Service
 
 ```java
 @Configuration
@@ -335,7 +342,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 }    
 ```
 
-##### In Memory Authentication Fluent API
+```
+# this should be removed/commented out as we already provided users with InMemoryUserDetailsManager
+
+#spring.security.user.name=spring
+#spring.security.user.password=guru
+```
+
+### In Memory Authentication Fluent API
+- `{noop}` - no encoding password encoder
 
 ```java
   @Override
@@ -351,9 +366,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 ```
 
-#### Password Security
+## Password Security
 
-##### Password Encoding
+### Password Encoding
 
 - Password Hash
   - A hash is a one-way mathematical algorithm applied to the password
