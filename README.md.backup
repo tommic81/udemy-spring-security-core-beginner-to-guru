@@ -350,7 +350,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 ```
 
 ### In Memory Authentication Fluent API
-- `{noop}` - no encoding password encoder
+- `{noop}` - no encoding password encoder. This key is handled by delegating password encoder.
 
 ```java
   @Override
@@ -392,7 +392,19 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     - Pbkdf2
     - SCrypt
 
-##### LDAP Password Encoder
+#### Overwritting the default implementation of delegating password encoder
+- We do this by defing a **bean** `PasswordEncoder`
+- In that case keys like in curly brackets ` .password("{noop}guru")` have to be removed as they are handled by **delegating password encoder**. 
+
+#### NoOP Password Encoder
+```java
+	// overwritting the default implementation of delegating password encoder 
+    @Bean
+    PasswordEncoder passwordEncoder(){
+        return NoOpPasswordEncoder.getInstance();
+    }
+```
+#### LDAP Password Encoder
 
 ```java
     @Bean
@@ -400,8 +412,27 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return new LdapShaPasswordEncoder();
     }
 ```
+- User/pass configuration
+```java
+ @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        //{noop} - no encoding password encoder
+        auth.inMemoryAuthentication()
+                .withUser("spring")
+                .password("{SSHA}cE/8qtCZZYRx1dKc2vwgSt3ctE8KLKdc7wrMBg==") //guru
+                .roles("ADMIN")
+                .and()
+                .withUser("user")
+                .password("{SSHA}Sh8eFH9rJeKJmg/L717pHHqi0McMofpsehk6cg==") //password
+                .roles("USER")
+                .and()
+                .withUser("scott")
+                .password("tiger")
+                .roles("CUSTOMER");
+    }
+``` 
 
-##### SHA-256 LDAP Password Encoder
+#### SHA-256 LDAP Password Encoder
 
 ```java
    @Bean
@@ -409,8 +440,26 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return new StandardPasswordEncoder();
     }
 ```
-
-##### BCrypt Password Encoder
+- User/pass configuration
+```java
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        //{noop} - no encoding password encoder
+        auth.inMemoryAuthentication()
+                .withUser("spring")
+                .password("4fef0a35c1fc8eab8fcfb70fc3798fb16daae7d25af328721542a611103c95a32b8832b069ea35fc") //guru
+                .roles("ADMIN")
+                .and()
+                .withUser("user")
+                .password("86db29e1cecf64485d1f58d5df2a99006bad098826d89a64d9a36399ef29212af8743f77ef55b291") //password
+                .roles("USER")
+                .and()
+                .withUser("scott")
+                .password("tiger")
+                .roles("CUSTOMER");
+    }
+```
+#### BCrypt Password Encoder
 
 ```java
  @Bean
@@ -418,8 +467,28 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return new BCryptPasswordEncoder();
     }
 ```
+- User/pass configuration
+```
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        //{noop} - no encoding password encoder
+        auth.inMemoryAuthentication()
+                .withUser("spring")
+                .password("$2a$10$elNhnZsfpS1UvLjb8jk54OLHZ5f8e61Q0akfYUOqGLhSXhClVIJjC") //guru
+                .roles("ADMIN")
+                .and()
+                .withUser("user")
+                .password("$2a$10$KkkYIIt5KYSKAjs9kthAsOxeegFQhk9pZhUgSRfadGEpMba4At4BS") //password
+                .roles("USER")
+                .and()
+                .withUser("scott")
+                .password("tiger")
+                .roles("CUSTOMER");
+    }
+```
 
-##### Delegating Password Encoder
+
+### Delegating Password Encoder
 
 ```java
  @Bean
@@ -427,24 +496,46 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 ```
-
+- User/pass configuration
 ```java
-  @Override
+    @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        //{noop} - no encoding password encoder
         auth.inMemoryAuthentication()
                 .withUser("spring")
-                .password("{bcrypt}$2a$10$DMeky14ZiYx25kBPDlSi2eQRQ4KSWdTYqcyLOk/oiwvZLQ06H/diS")
+                .password("{bcrypt}$2a$10$elNhnZsfpS1UvLjb8jk54OLHZ5f8e61Q0akfYUOqGLhSXhClVIJjC") //guru
                 .roles("ADMIN")
                 .and()
                 .withUser("user")
-                .password("{sha256}5b0b6414f3c80385662fb67a276bbb5971a381b693745973e6afe3e5ee076ec0daa2bc3562771c7e")
-                .roles("USER");
-
-        auth.inMemoryAuthentication().withUser("scott").password("{ldap}{SSHA}wxajkfpXZ+3oUyHJ4NvUZ8tXAkW7licc2VRe+w==").roles("CUSTOMER");
+                .password("{sha256}586132a29baea16e660a50321a9c4f983b14e8b27bc2f0d67209c88b7f8a33f81a24734b5b312a7f") //password
+                .roles("USER")
+                .and()
+                .withUser("scott")
+                .password("{ldap}{SSHA}hXHdtkpmbJSvQ+EaZmN5+RlvYiQoSYkYShGIwA==") //tiger
+                .roles("CUSTOMER");
     }
 ```
+- Prefixes are used to pick up a proper encoder form Spring's class: `org.springframework.security.crypto.factory.PasswordEncoderFactories`
 
-##### Custom Delegating Password Encoder
+```
+    public static PasswordEncoder createDelegatingPasswordEncoder() {
+        String encodingId = "bcrypt";
+        Map<String, PasswordEncoder> encoders = new HashMap();
+        encoders.put(encodingId, new BCryptPasswordEncoder());
+        encoders.put("ldap", new LdapShaPasswordEncoder());
+        encoders.put("MD4", new Md4PasswordEncoder());
+        encoders.put("MD5", new MessageDigestPasswordEncoder("MD5"));
+        encoders.put("noop", NoOpPasswordEncoder.getInstance());
+        encoders.put("pbkdf2", new Pbkdf2PasswordEncoder());
+        encoders.put("scrypt", new SCryptPasswordEncoder());
+        encoders.put("SHA-1", new MessageDigestPasswordEncoder("SHA-1"));
+        encoders.put("SHA-256", new MessageDigestPasswordEncoder("SHA-256"));
+        encoders.put("sha256", new StandardPasswordEncoder());
+        encoders.put("argon2", new Argon2PasswordEncoder());
+        return new DelegatingPasswordEncoder(encodingId, encoders);
+    }
+```
+### Custom Delegating Password Encoder
 
 ```java
 public class SfgPasswordEncoderFactories {

@@ -1,5 +1,6 @@
 package guru.sfg.brewery.config;
 
+import guru.sfg.brewery.security.SfgPasswordEncoderFactories;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -7,14 +8,19 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return SfgPasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests(auth -> {
@@ -35,15 +41,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         //{noop} - no encoding password encoder
         auth.inMemoryAuthentication()
                 .withUser("spring")
-                .password("{noop}guru") // noop - password encoder (no encoding)
+                .password("{bcrypt}$2a$10$elNhnZsfpS1UvLjb8jk54OLHZ5f8e61Q0akfYUOqGLhSXhClVIJjC") //guru
                 .roles("ADMIN")
                 .and()
                 .withUser("user")
-                .password("{noop}guru")
+                .password("{sha256}586132a29baea16e660a50321a9c4f983b14e8b27bc2f0d67209c88b7f8a33f81a24734b5b312a7f") //password
                 .roles("USER")
                 .and()
                 .withUser("scott")
-                .password("{noop}tiger")
+                .password("{ldap}{SSHA}hXHdtkpmbJSvQ+EaZmN5+RlvYiQoSYkYShGIwA==") //tiger
                 .roles("CUSTOMER");
     }
 
