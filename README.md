@@ -564,7 +564,23 @@ PasswordEncoder passwordEncoder(){
 }
 ```
 
-#### Custom Authentication Filter 
+## Custom Authentication Filter
+### Spring Security Filters
+- All Spring Security Filters implement the Filter interface
+  -	Part of the Java Servlet API
+  - Accepts Servlet Request, Servlet Response, and Filter Chain
+- Can be used to implement actions on the Request or Response
+- HTTP Basic Authentication is using the filter BasicAuthenticationFilter
+  - Inspects Request for HTTP Basic credentials and performs Authentication
+  
+### Custom Spring Security Filter Use Case
+- Hypothetically speaking we have a REST API using custom headers for Authentication
+- Goal here is to mimic a legacy application
+  - This is not a recommended approach for Authentication
+- Legacy Application sending API key and API Secret in HTTP Headers
+- Create a Spring Security filter for this legacy Authentication
+  - Extend Spring Security’s AbstractAuthenticationProcessingFilter
+  - Configure Spring Security to use Custom Filter
 
 - RestHeaderAuthFilter
 
